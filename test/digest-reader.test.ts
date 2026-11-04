@@ -59,6 +59,37 @@ describe('readNight', () => {
     });
   }));
 
+  it('orders sub-millisecond instants, equivalent fractions, and times before the epoch', () => withRunsDir((runsDir) => {
+    writeFileSync(join(runsDir, '1969-12-31.jsonl'), [
+      event('2026-01-01T00:00:00.0009Z', 'precise', 'fail', 'later', 'newer error'),
+      event('2026-01-01T00:00:00.0001Z', 'precise', 'ok', 'earlier', 'older error'),
+      event('2026-01-01T01:00:00.1+01:00', 'tie', 'retry', 'first'),
+      event('2026-01-01T00:00:00.1000Z', 'tie', 'ok', null),
+      event('1969-12-31T23:59:59.9Z', 'epoch', 'ok', 'before'),
+      event('1970-01-01T00:00:00Z', 'epoch', 'fail', 'after'),
+    ].join('\n'));
+
+    const digest = readNight(runsDir, '1969-12-31');
+    expect(digest.kind).toBe('present');
+    if (digest.kind !== 'present') return;
+    expect(digest.badLineCount).toBe(0);
+    expect(digest.counts).toEqual({ ok: 3, retry: 1, fail: 2 });
+    expect(digest.rows.map((row) => row.job)).toEqual(['epoch', 'precise', 'tie']);
+    expect(digest.rows[0]).toMatchObject({
+      firstAt: '1969-12-31T23:59:59.9Z', lastAt: '1970-01-01T00:00:00Z',
+      lastStatus: 'fail', owner: 'after',
+    });
+    expect(digest.rows[1]).toEqual({
+      job: 'precise', owner: 'later', runs: 2, retries: 0, lastStatus: 'fail',
+      lastError: 'newer error', firstAt: '2026-01-01T00:00:00.0001Z',
+      lastAt: '2026-01-01T00:00:00.0009Z', hasFailure: true,
+    });
+    expect(digest.rows[2]).toMatchObject({
+      owner: null, runs: 2, retries: 1, lastStatus: 'ok',
+      firstAt: '2026-01-01T01:00:00.1+01:00', lastAt: '2026-01-01T00:00:00.1000Z',
+    });
+  }));
+
   it('counts invalid JSON, invalid shapes, and actual blank lines but ignores a terminal newline', () => withRunsDir((runsDir) => {
     writeFileSync(join(runsDir, '2026-02-28.jsonl'), [
       event('2026-02-28T00:00:00+00:00', 'valid', 'ok', null),

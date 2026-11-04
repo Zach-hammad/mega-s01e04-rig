@@ -6,9 +6,11 @@ import type { DigestCounts, DigestRow, DigestStatus, ReadNight } from './types.j
 const MAX_NIGHT_BYTES = 32 * 1024 * 1024;
 const READ_CHUNK_BYTES = 64 * 1024;
 
+type Instant = { wholeSecond: number; fraction: string };
+
 type RunEvent = {
   at: string;
-  instant: number;
+  instant: Instant;
   job: string;
   status: DigestStatus;
   owner: string | null;
@@ -17,9 +19,9 @@ type RunEvent = {
 
 type JobState = {
   row: DigestRow;
-  firstInstant: number;
-  lastInstant: number;
-  lastErrorInstant: number;
+  firstInstant: Instant;
+  lastInstant: Instant;
+  lastErrorInstant: Instant | null;
 };
 
 function isCalendarDate(value: string): boolean {
@@ -36,19 +38,26 @@ function isCalendarDate(value: string): boolean {
   return day >= 1 && day <= daysInMonth[month - 1];
 }
 
-function parseInstant(value: string): number | null {
-  const match = /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(Z|[+-]\d{2}:\d{2})$/.exec(value);
+function parseInstant(value: string): Instant | null {
+  const match = /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(Z|[+-]\d{2}:\d{2})$/.exec(value);
   if (!match || !isCalendarDate(match[1])) return null;
 
   const hour = Number(match[2]);
   const minute = Number(match[3]);
   const second = Number(match[4]);
-  const offset = match[5];
+  const offset = match[6];
   if (hour > 23 || minute > 59 || second > 59) return null;
   if (offset !== 'Z' && (Number(offset.slice(1, 3)) > 23 || Number(offset.slice(4, 6)) > 59)) return null;
 
-  const instant = Date.parse(value);
-  return Number.isFinite(instant) ? instant : null;
+  const wholeSecond = Date.parse(`${match[1]}T${match[2]}:${match[3]}:${match[4]}${offset}`) / 1000;
+  if (!Number.isFinite(wholeSecond)) return null;
+  return { wholeSecond, fraction: (match[5] ?? '').replace(/0+$/, '') };
+}
+
+function compareInstants(left: Instant, right: Instant): -1 | 0 | 1 {
+  if (left.wholeSecond !== right.wholeSecond) return left.wholeSecond < right.wholeSecond ? -1 : 1;
+  if (left.fraction === right.fraction) return 0;
+  return left.fraction < right.fraction ? -1 : 1;
 }
 
 function parseEvent(value: unknown): RunEvent | null {
@@ -154,7 +163,7 @@ export const readNight: ReadNight = (runsDir, night) => {
           },
           firstInstant: event.instant,
           lastInstant: event.instant,
-          lastErrorInstant: error === null ? -Infinity : event.instant,
+          lastErrorInstant: error === null ? null : event.instant,
         });
         continue;
       }
@@ -162,17 +171,17 @@ export const readNight: ReadNight = (runsDir, night) => {
       current.row.runs++;
       if (event.status === 'retry') current.row.retries++;
       if (event.status === 'fail') current.row.hasFailure = true;
-      if (event.instant < current.firstInstant) {
+      if (compareInstants(event.instant, current.firstInstant) < 0) {
         current.firstInstant = event.instant;
         current.row.firstAt = event.at;
       }
-      if (event.instant >= current.lastInstant) {
+      if (compareInstants(event.instant, current.lastInstant) >= 0) {
         current.lastInstant = event.instant;
         current.row.lastAt = event.at;
         current.row.lastStatus = event.status;
         current.row.owner = event.owner;
       }
-      if (error !== null && event.instant >= current.lastErrorInstant) {
+      if (error !== null && (current.lastErrorInstant === null || compareInstants(event.instant, current.lastErrorInstant) >= 0)) {
         current.lastErrorInstant = event.instant;
         current.row.lastError = error;
       }
