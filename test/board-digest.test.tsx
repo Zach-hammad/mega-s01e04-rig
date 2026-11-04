@@ -19,6 +19,15 @@ function makeRunsDir(): string {
   return dir;
 }
 
+function expectNightCounts(html: string, night: string, counts: { ok: number; retry: number; fail: number }): void {
+  const row = html
+    .match(/<li\b[^>]*>[\s\S]*?<\/li>/g)
+    ?.find((candidate) => candidate.includes(`href="/digest/${night}"`));
+  expect(row).toBeDefined();
+  const visibleText = row?.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+  expect(visibleText).toBe(`${night} · ok ${counts.ok} · retry ${counts.retry} · fail ${counts.fail}`);
+}
+
 afterEach(() => {
   for (const dir of temporaryDirs.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
@@ -30,9 +39,9 @@ describe('status board digest links', () => {
 
     expect(response.status).toBe(200);
     expect(html).toContain('href="/digest/2026-10-28"');
-    expect(html).toContain('2026-10-28</a> · ok 10 · retry 4 · fail 1');
+    expectNightCounts(html, '2026-10-28', { ok: 10, retry: 4, fail: 1 });
     expect(html).toContain('href="/digest/2026-10-27"');
-    expect(html).toContain('2026-10-27</a> · ok 7 · retry 0 · fail 0');
+    expectNightCounts(html, '2026-10-27', { ok: 7, retry: 0, fail: 0 });
   });
 
   it('keeps an empty runs directory empty', async () => {
@@ -60,6 +69,6 @@ describe('status board digest links', () => {
 
     expect(response.status).toBe(200);
     expect(html).toContain('href="/digest/2026-10-30"');
-    expect(html).toContain('2026-10-30</a> · ok 1 · retry 1 · fail 1');
+    expectNightCounts(html, '2026-10-30', { ok: 1, retry: 1, fail: 1 });
   });
 });
