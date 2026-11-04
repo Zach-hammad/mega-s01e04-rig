@@ -16,6 +16,10 @@ const css = `
   th { color: var(--mute); font-weight: normal; }
   .warn { color: var(--warn); }
   .mute { color: var(--mute); }
+  .table-scroll { max-width: 100%; overflow-x: auto; }
+  .digest-table { width: max-content; min-width: 100%; }
+  .digest-table th, .digest-table td { white-space: nowrap; }
+  .digest-table .error-cell { min-width: 12rem; max-width: 32rem; white-space: pre-wrap; overflow-wrap: anywhere; }
 `;
 
 export function Layout(props: { title: string; lane: Lane; children: Child }) {
