@@ -1,6 +1,6 @@
 ---
 plan: morning-digest
-status: ready
+status: done
 owner: rook
 opened: 2026-10-29
 ---
@@ -77,3 +77,16 @@ page again with `LANE_MARKER` unset (the banner reads "no marker set") and uploa
 link. Move this plan to `docs/plans/done/` with its issue list.
 
 Done when: the preview link no longer shows the lane marker.
+
+## Issues
+
+| # | Issue | URL |
+|---|---|---|
+| 1 | Shared digest types and reader contract | https://github.com/Zach-hammad/mega-s01e04-rig/issues/1 |
+| 2 | Read and aggregate nightly run logs | https://github.com/Zach-hammad/mega-s01e04-rig/issues/2 |
+| 3 | Render the nightly digest page | https://github.com/Zach-hammad/mega-s01e04-rig/issues/3 |
+| 4 | Expose matching digest JSON | https://github.com/Zach-hammad/mega-s01e04-rig/issues/4 |
+| 5 | Link nightly digests from the status board | https://github.com/Zach-hammad/mega-s01e04-rig/issues/5 |
+| 6 | Verify digest routes with temporary logs | https://github.com/Zach-hammad/mega-s01e04-rig/issues/6 |
+| 7 | Export and submit the public review preview | https://github.com/Zach-hammad/mega-s01e04-rig/issues/7 |
+| 8 | Remove the public marker and archive the plan | https://github.com/Zach-hammad/mega-s01e04-rig/issues/8 |
