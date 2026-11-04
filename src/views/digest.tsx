@@ -36,7 +36,7 @@ export function DigestPage(props: {
               {rows.map((row) => (
                 <tr>
                   <th scope="row">{row.job}</th>
-                  <td>{row.owner ?? '—'}</td>
+                  <td>{row.owner !== null && row.owner.trim() !== '' ? row.owner : '—'}</td>
                   <td>{row.runs}</td>
                   <td>
                     {row.retries}
